@@ -1,6 +1,6 @@
 #!/bin/bash
 
-. config
+. /media/config
 
 function run_always()
 {

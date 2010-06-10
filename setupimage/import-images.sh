@@ -1,6 +1,6 @@
 #!/bin/bash
 
-. config
+. /media/config
 
 DIR=/tmp/image-import
 
