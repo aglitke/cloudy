@@ -101,7 +101,7 @@ cat <<EOF > $DIR/baseimage-domain.xml
     <emulator>$QEMU</emulator>
     <disk type='file' >
         <source file='$BASEIMAGE'/>
-        <target dev='hda' />
+        <target dev='vda' bus='virtio' />
     </disk>
     <disk type='file' device='cdrom'>
         <source file='$DIR/kickstart.iso'/>

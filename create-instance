@@ -98,7 +98,7 @@ cat <<EOF > $DIR/domain.xml
     <emulator>$QEMU</emulator>
     <disk type='file' >
         <source file="$DIR/root.img"/>
-        <target dev='hda' />
+        <target dev='vda' bus='virtio' />
     </disk>
     <disk type='file' device='cdrom'>
         <source file="$DIR/setup.iso"/>
