@@ -1,0 +1,132 @@
+#!/bin/bash
+###############################################################
+# create-instance - Create a cloudy virtual machine instance. #
+###############################################################
+
+### Command-line arguments
+NR=$1
+###
+
+### Import Global Configuration
+. config
+
+### Global variables
+BASEIMAGE=`pwd`/baseimage/baseimage.img
+NAME="cloudy-$1"
+SERIAL_PORT_NR=$(($SERIAL_PORT_BASE + $NR))
+MAC_NR=64
+
+DIR=`pwd`/instances/$NAME
+
+function find_qemu()
+{
+    if [ -n "$QEMU" ]; then
+        return
+    fi
+
+    QEMU=`which qemu-system-x86_64`
+    if [ $? -eq 0 ]; then
+        return
+    fi
+    QEMU=`which qemu-kvm`
+    if [ $? -eq 0 ]; then
+        return
+    fi
+    if [ -x "/usr/libexec/qemu-kvm" ]; then
+        QEMU="/usr/libexec/qemu-kvm"
+        return
+    fi
+
+    # Not Found!
+    echo "Could not find qemu!  Please set QEMU manually."
+    exit 1
+}
+
+#
+# Start of main script
+#
+
+if [ -z "$NR" ]; then
+    echo "You must specify a domain sequence number"
+    exit 1
+fi
+
+if [ ! -f $BASEIMAGE ]; then
+    echo "Missing base image: $BASEIMAGE !"
+    echo "You must first run create-baseimage"
+    exit 1
+fi
+
+rm -rf $DIR
+mkdir -p $DIR
+
+# Create a custom setup image
+./create-setupimage -o $DIR/setup.iso -v NAME="$NAME" -v DURATION=7200 \
+                                      -v IMAGE_SIZE=20000  >/dev/null
+
+pushd $DIR > /dev/null
+qemu-img create -f qcow2 -b $BASEIMAGE root.img > /dev/null
+if [ $? -ne 0 ]; then
+    echo "Failed to create disk image! Aborting."
+    exit 1
+fi
+popd > /dev/null
+
+# Choose a mac address:
+MAC=`printf "$MAC_BASE%2.2x" $NR`
+
+# Write the domain XML
+cat <<EOF > $DIR/domain.xml
+<domain type='kvm'>
+  <name>$NAME</name>
+  <memory>$MEM</memory>
+  <currentMemory>$MEM</currentMemory>
+  <vcpu>1</vcpu>
+  <os>
+    <type arch='x86_64' machine='pc' >hvm</type>
+  </os>
+  <clock offset='localtime'/>
+  <on_poweroff>destroy</on_poweroff>
+  <on_reboot>restart</on_reboot>
+  <on_crash>destroy</on_crash>
+  <features>
+     <pae/>
+     <acpi />
+     <apic />
+  </features>
+  <devices>
+    <emulator>$QEMU</emulator>
+    <disk type='file' >
+        <source file="$DIR/root.img"/>
+        <target dev='hda' />
+    </disk>
+    <disk type='file' device='cdrom'>
+        <source file="$DIR/setup.iso"/>
+        <target dev='hdb'/>
+        <readonly/>
+    </disk>
+    <serial type='tcp'>
+      <source mode='bind' host='' service='$SERIAL_PORT_NR'/>
+      <protocol type='telnet'/>
+      <target port='0'/>
+    </serial>
+    <console type='tcp'>
+      <source mode='bind' host='' service='$SERIAL_PORT_NR'/>
+      <protocol type='telnet'/>
+      <target port='0'/>
+    </console>
+    <input type='mouse' bus='ps2'/>
+    <interface type='bridge'>
+      <source bridge='$NET_BRIDGE'/>
+      <model type='virtio'/>
+      <mac address='$MAC'/>
+    </interface>
+    <graphics type='vnc'/>
+  </devices>
+</domain>
+EOF
+
+touch $DIR/serial-$SERIAL_PORT_NR
+
+echo "Domain $NAME successfully created in $DIR"
+exit 0

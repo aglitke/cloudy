@@ -1,0 +1,31 @@
+# If you want to use a specific version of qemu, provide the full path to the
+# binary here.  Otherwise, a few well-known locations will be checked.
+QEMU=/usr/libexec/qemu-kvm
+
+# The location of the Fedora 12 mirror.  
+# Get a list here: http://mirrors.fedoraproject.org/publiclist
+MIRROR=http://mirrors.xmission.com/fedora/releases/12/
+
+#
+## Instance Creation
+##  These variables affect the creation of cloudy VM instances
+
+# Each VM is created with a telnet-style serial port.  This variable
+# controls the starting port number of the block that will be used.
+SERIAL_PORT_BASE=3110
+
+# Set the amount of memory that will be given to each VM
+MEM=$(( 1 * 1024 * 1024 ))
+
+# Set the starting MAC address to be used when creating VMs.
+MAC_BASE="de:ad:be:ef:00:"
+
+# The network can be configured in one of two ways:
+# bridge:  VMs will be connected directly to the LAN via the identified
+#          bridge. You must specify NET_BRIDGE
+# XXX: Only bridge is supported at the moment.
+# network: Connect the VMs to a defined libvirt network.  You must specify
+#          the network name in NET_NETWORK
+NETWORK_MODE=bridge
+NET_BRIDGE=br0
+#NET_NETWORK=

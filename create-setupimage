@@ -1,0 +1,26 @@
+#!/bin/bash
+
+rm -f setupimage/config
+
+while [ $# -gt 0 ]; do
+   OPT=$1
+   ARG="$2"
+   shift; shift
+   case $OPT in
+   -v)  echo "$ARG" >> setupimage/config ;;
+   -o)  OUTFILE=$ARG
+   esac
+done
+
+#echo "NAME=$NAME" > setupimage/config
+# AGLITKE-custom
+#echo "DURATION=300" >> setupimage/config
+
+echo "Using config:"
+cat setupimage/config
+
+mkisofs --quiet -J -o $OUTFILE setupimage
+if [ $? -ne 0 ]; then
+    echo "Setup ISO creation failed! Aborting."
+    exit 1
+fi

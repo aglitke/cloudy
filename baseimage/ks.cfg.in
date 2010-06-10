@@ -1,0 +1,67 @@
+# FC-12 cloudy kickstart file
+
+install
+url --url=<<MIRROR>>/Fedora/x86_64/os/
+lang en_US.UTF-8
+keyboard us
+network --device eth0 --bootproto dhcp
+rootpw  --iscrypted $6$0RcAV5bkKiGda8ZV$f68SMp8vfDJ6FEW47s3S1OI9kYuFsj5PV3mdwSNUbxlKUPeFB0rEMleRrGttex7dp2TOy40uX2gJN06/0cyku0
+firewall --disabled
+firstboot --disabled
+authconfig --enableshadow --passalgo=sha512 --enablefingerprint
+selinux --enforcing
+timezone --utc America/Chicago
+bootloader --location=mbr --driveorder=sda --append=" LANG=en_US.UTF-8 SYSFONT=latarcyrheb-sun16 KEYBOARDTYPE=pc KEYTABLE=us rhgb quiet"
+
+clearpart --all --initlabel
+autopart
+
+repo --name="Fedora 12 - Everything - x86_64"  --baseurl=<<MIRROR>>/Everything/x86_64/os/
+
+poweroff
+
+%packages
+@admin-tools
+@base
+@core
+@editors
+@fonts
+@hardware-support
+@input-methods
+@java
+@mysql
+@text-internet
+@web-server
+@base-x
+xfsprogs
+mtools
+gpgme
+gnupg2
+hdparm
+iok
+php-mysql
+mediawiki
+git
+screen
+gcc
+gcc-c++
+gettext
+python
+python-devel
+%end
+
+%post
+chkconfig httpd on
+chkconfig mysqld on
+
+cat <<EOF > /etc/rc.local
+#!/bin/sh
+mount -oro /dev/cdrom /media/
+pushd /media
+./setup.sh
+popd
+touch /var/lock/subsys/local
+exit 0
+EOF
+chmod +x /etc/rc.local
+%end

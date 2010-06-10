@@ -1,0 +1,146 @@
+#!/bin/bash
+##################################################
+# create-baseimage - Create a cloudy base image. #
+##################################################
+
+# Import global configuration settings
+. config
+
+DIR=`pwd`/baseimage
+BASEIMAGE="$DIR/baseimage.img"
+
+function check_step()
+{
+    RC=$?
+    STEP=$1
+    if [ $RC -ne 0 ]; then
+        echo "The previous step ($STEP) failed!"
+        exit 1
+    else
+        echo "Finished step: $STEP"
+    fi
+}
+
+function find_qemu()
+{
+    if [ -n "$QEMU" ]; then
+        return
+    fi
+
+    QEMU=`which qemu-system-x86_64`
+    if [ $? -eq 0 ]; then
+        return
+    fi
+    QEMU=`which qemu-kvm`
+    if [ $? -eq 0 ]; then
+        return
+    fi
+    if [ -x "/usr/libexec/qemu-kvm" ]; then
+        QEMU="/usr/libexec/qemu-kvm"
+        return
+    fi
+
+    # Not Found!
+    echo "Could not find qemu!  Please set QEMU manually."
+    exit 1
+}
+
+function get_boot_files()
+{
+    if [ ! -f $DIR/vmlinuz ]; then
+        echo "Downloading kernel"
+        wget -O $DIR/vmlinuz $MIRROR/Fedora/x86_64/os/isolinux/vmlinuz
+        check_step "download kernel"
+    fi
+    if [ ! -f $DIR/initrd.img ]; then
+        echo "Downloading initrd"
+        wget -O $DIR/initrd.img $MIRROR/Fedora/x86_64/os/isolinux/initrd.img
+        check_step "download initrd"
+    fi
+}
+
+# Make sure we know where qemu is installed
+find_qemu
+check_step "Find qemu binary"
+
+# Download the boot files if needed
+get_boot_files
+
+# Create an empty disk image
+qemu-img create -f qcow2 $BASEIMAGE 10G > /dev/null
+check_step "Create empty disk"
+chmod 666 $BASEIMAGE
+
+# Create the kickstart ISO
+sed -e "s#<<MIRROR>>#$MIRROR#" < $DIR/ks.cfg.in > $DIR/kickstart/ks.cfg
+mkisofs -J --quiet -o $DIR/kickstart.iso $DIR/kickstart
+check_step "Create kickstart ISO"
+
+cat <<EOF > $DIR/baseimage-domain.xml
+<domain type='kvm'>
+  <name>baseimage-installer</name>
+  <memory>1048576</memory>
+  <currentMemory>1048576</currentMemory>
+  <vcpu>1</vcpu>
+  <os>
+    <type arch='x86_64'>hvm</type>
+    <kernel>$DIR/vmlinuz</kernel>
+    <initrd>$DIR/initrd.img</initrd>
+    <cmdline>linux ks=cdrom:/ks.cfg</cmdline>
+  </os>
+  <clock offset='localtime'/>
+  <on_poweroff>destroy</on_poweroff>
+  <on_reboot>destroy</on_reboot>
+  <on_crash>destroy</on_crash>
+  <features>
+     <pae/>
+     <acpi />
+     <apic />
+  </features>
+  <devices>
+    <emulator>$QEMU</emulator>
+    <disk type='file' >
+        <source file='$BASEIMAGE'/>
+        <target dev='hda' />
+    </disk>
+    <disk type='file' device='cdrom'>
+        <source file='$DIR/kickstart.iso'/>
+        <target dev='hdb'/>
+        <readonly/>
+    </disk>
+    <input type='mouse' bus='ps2'/>
+    <interface type='network'>
+      <source network='default'/>
+      <model type='virtio'/>
+    </interface>
+    <graphics type='vnc'/>
+  </devices>
+</domain>
+EOF
+check_step "Create domain XML"
+
+virsh create $DIR/baseimage-domain.xml
+check_step "Create virtual machine"
+
+echo -n "Waiting for install to finish"
+SECS=0
+while [ $SECS -lt 7200 ]; do
+    virsh list | grep -q baseimage-installer
+    if [ $? -ne 0 ]; then
+        DONE=1
+        break
+    fi
+    echo -n "."
+    sleep 10
+    SECS=$(($SECS + 10))
+done
+echo ""
+
+if [ "$DONE" == "1" ]; then
+    echo "Installation has completed."
+    exit 0
+else
+    echo "Installation has timed out.  You may want to connect to the virtual"
+    echo "machine to see what is going on."
+    exit 1
+fi
