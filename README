@@ -1,0 +1,70 @@
+Environment Setup:
+==================
+
+1. Prepare the KVM host:
+   - Make sure qemu and libvirt are installed
+   - Configure bridged networking
+   - Make sure guests can get an IP address and set their hostname via DHCP
+   - Make sure your host can launch VMs from arbitrary directories (you may
+     need to put SELinux or AppArmour in permissive mode)
+
+2. Prepare the Driver host:
+   This machine will be generating lots of network traffic to your VMs so it
+   should be on a fast link that you don't mind saturating.  You may use the
+   KVM host as the driver, but the added jmeter activity will impact the
+   quality of your results.
+
+   - Install a recent, high-quality JRE (ie. IBM JRE 1.6)
+   - Install Apache jmeter: http://jakarta.apache.org/jmeter/
+
+3. Install Cloudy on the KVM host:
+   git clone git://kernel.beaverton.ibm.com/~aglitke/cloudy.git
+   cd cloudy
+
+4. Create the base image:
+   sudo ./create-baseimage
+
+   - This will install Fedora 12 onto a new disk image that will be used as a
+     template for the virtual machines.
+   - Sudo must be used because qemu needs permission to set up the network.
+
+5. Create individual VM instances:
+   ./create-instance <nr>
+
+   - You should create a sequence of these from 1..N
+
+Executing the Benchmark:
+========================
+
+1. Copy driver files to the driver host:
+   scp client/cloudy.jmx client/analyze_jmeter.pl <driver-host>:
+
+2. Start the cloudy VM instances:
+   for i in `seq 1 $N`; do
+       sudo virsh create instances/cloudy-$i/domain.xml
+   done
+
+   - Sudo must be used because qemu needs permission to set up the network.
+   - If this is the first time they are booted, the VMs will perform
+     self-configuration (configure mediawiki, set hostname, etc). When this is
+     complete, you should be able to see a wiki at http://cloudy-<nr>/wiki.
+     You can check the status of configuration by going to http://cloudy-<nr>/.
+
+3. Execute the jmeter test plan
+   jmeter -n -t test.jmx -l <results-file> -Jnr_hosts=<nr_hosts> \
+                                           -Jthreads=<threads> \
+                                           -Jruntime=<runtime> \
+                                           -Jrampup=<rampup>
+   Where:
+      <results-file> is the file to record jmeter results to
+      <nr_hosts> is the number of cloudy VMs to target simultaneously
+      <threads> is the number simultaneous users (per VM)
+      <runtime> sets the duration of the run (in seconds)
+      <rampup> defines how long it should take for all threads to be started
+
+4. Process the results:
+   mkdir plots/
+   ./analyse-jmeter.pl -o summary -p plots <results-file>
+
+   - The summary file contains post-processed jmeter results (including quality
+     of service and throughput metrics).
