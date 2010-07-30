@@ -1,6 +1,6 @@
 #!/usr/bin/perl
 # Cloudy: An open LAMP benchmark suite
-# Copyright (C) 2010 Karl Rister, IBM Corporation
+# Copyright (C) 2010 Karl Rister and Kevin Corry, IBM Corporation
 # 
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License version 2 as
