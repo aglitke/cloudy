@@ -159,7 +159,7 @@
               </HTTPSampler>
               <hashTree/>
               <ConstantTimer guiclass="ConstantTimerGui" testclass="ConstantTimer" testname="Delay" enabled="true">
-                <stringProp name="ConstantTimer.delay">3000</stringProp>
+                <stringProp name="ConstantTimer.delay">${delay}</stringProp>
               </ConstantTimer>
               <hashTree/>
             </hashTree>
@@ -217,6 +217,18 @@
           </elementProp>
         </collectionProp>
       </Arguments>
+      <hashTree/>
+      <UserParameters guiclass="UserParametersGui" testclass="UserParameters" testname="User Parameters" enabled="true">
+        <collectionProp name="UserParameters.names">
+          <stringProp name="95467907">delay</stringProp>
+        </collectionProp>
+        <collectionProp name="UserParameters.thread_values">
+          <collectionProp name="-339408601">
+            <stringProp name="-1284305052">${__Random(1000, 5000,)}</stringProp>
+          </collectionProp>
+        </collectionProp>
+        <boolProp name="UserParameters.per_iteration">false</boolProp>
+      </UserParameters>
       <hashTree/>
     </hashTree>
   </hashTree>
