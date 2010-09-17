@@ -118,6 +118,7 @@ cat <<EOF > $DIR/baseimage-domain.xml
     <disk type='file' >
         <source file='$BASEIMAGE'/>
         <target dev='vda' bus='virtio' />
+        <driver name='qemu' type='qcow2' cache='none'/>
     </disk>
     <disk type='file' device='cdrom'>
         <source file='$DIR/kickstart.iso'/>

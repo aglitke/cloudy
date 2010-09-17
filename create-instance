@@ -115,6 +115,7 @@ cat <<EOF > $DIR/domain.xml
     <disk type='file' >
         <source file="$DIR/root.img"/>
         <target dev='vda' bus='virtio' />
+        <driver name='qemu' type='qcow2' cache='none'/>
     </disk>
     <disk type='file' device='cdrom'>
         <source file="$DIR/setup.iso"/>
