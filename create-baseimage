@@ -88,6 +88,7 @@ check_step "Create empty disk"
 chmod 666 $BASEIMAGE
 
 # Create the kickstart ISO
+mkdir -p $DIR/kickstart
 sed -e "s#<<MIRROR>>#$MIRROR#" < $DIR/ks.cfg.in > $DIR/kickstart/ks.cfg
 mkisofs -J --quiet -o $DIR/kickstart.iso $DIR/kickstart
 check_step "Create kickstart ISO"
